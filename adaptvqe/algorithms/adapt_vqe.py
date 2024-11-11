@@ -2582,6 +2582,16 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         """
         pass
 
+class ShotOptimizedAdaptVQE(AdaptVQE):
+    
+    def __init__(self, *args, **kvargs):
+
+        super().__init__(*args, **kvargs)
+
+        self.state = self.sparse_ref_state
+        self.ref_state = self.sparse_ref_state
+        self.pool.imp_type = ImplementationType.SPARSE
+
 
 class LinAlgAdapt(AdaptVQE):
     """
@@ -2627,6 +2637,7 @@ class LinAlgAdapt(AdaptVQE):
             orb_rotation_generator = self.create_orb_rotation_generator(orb_params)
             ket = expm_multiply(orb_rotation_generator, ket)
 
+        print("======================= Quantum Measurement =======================")
         # Get the corresponding bra and calculate the energy: |<bra| H |ket>|
         bra = ket.transpose().conj()
         # exp_value = (bra * observable * ket)[0, 0].real # slower

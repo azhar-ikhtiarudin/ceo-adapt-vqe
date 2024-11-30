@@ -384,15 +384,21 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             indices (list): ansatz indices
             ref_state (csc_matrix): reference state for the ansatz
         """
-
+        print("Inside Get State:")
+        print("coeff:", coefficients)
+        print("indices:", indices)
+        print("ref_state:", ref_state)
         if coefficients is None or indices is None:
+            print("C1")
             # No ansatz provided, return current state
             if ref_state is not None:
                 raise ValueError("Resulting state is just input reference state.")
             if coefficients is not None or indices is not None:
                 raise ValueError("Cannot provide only coefficients or only indices.")
+            print("self.state", self.state)
             state = self.state
         else:
+            print("C2")
             # Calculate state from scratch
             state = self.compute_state(coefficients, indices, ref_state)
 
@@ -430,17 +436,25 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             print("\nNon-Zero Gradients (tolerance E-8):")
 
         for index in range(self.pool.size):
-
+            print("--Pool Size:", self.pool.size)
             gradient = self.eval_candidate_gradient(index, coefficients, indices)
+            print("--Gradient:", gradient)
             gradient = self.penalize_gradient(gradient, index, silent)
 
             if np.abs(gradient) < 10**-8:
                 continue
+            print("Initial Selected Gradients:", sel_gradients)
+            print("Initial Selected Indices:", sel_indices)
+            print("Initial Gradient:", gradient)
+            print("Initial Index:", index)
 
             # Find the index of the operator in the ordered gradient list
             sel_gradients, sel_indices = self.place_gradient(
                 gradient, index, sel_gradients, sel_indices
             )
+
+            print("After Place Selected Gradients:", sel_gradients)
+            print("After Place Selected Indices:", sel_indices)
 
             if index not in self.pool.parent_range:
                 total_norm += gradient**2
@@ -454,7 +468,10 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             max_norm = 0
 
         print("Total gradient norm: {}".format(total_norm))
-
+        print("Final Selected Indices:", sel_indices)
+        print("Final Selected Gradients:", sel_gradients)
+        print("Total Norm", total_norm)
+        print("Max Norm", max_norm)
         return sel_indices, sel_gradients, total_norm, max_norm
 
     def place_gradient(self, gradient, index, sel_gradients, sel_indices):
@@ -486,17 +503,18 @@ class AdaptVQE(metaclass=abc.ABCMeta):
 
             # Next op has higher gradient, continue to a later place in list
             i = i + 1
-
+        print("--1-", sel_gradients)
         # i now contains the position of the operator in the list
         if i < self.window:
             # The new operator has a place in the list; its gradient is higher than the gradient of at least the lowest
             # gradient operator in the list. Insert it in the proper position
-
+            print("---sel.window:", self.window)
             sel_indices = sel_indices[:i] + [index] + sel_indices[i : self.window - 1]
 
             sel_gradients = (
                 sel_gradients[:i] + [gradient] + sel_gradients[i : self.window - 1]
             )
+        print("--2-", sel_gradients)
 
         return sel_gradients, sel_indices
 
@@ -516,7 +534,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             # We will use at most self.candidates operators
             window = self.candidates
 
-        self.window = window
+        self.window = window 
 
     def break_gradient_tie(self, gradient, sel_gradient):
         """
@@ -585,8 +603,9 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         Returns:
           gradient (float): the norm of the gradient of the operator labeled by index, in the specified state.
         """
-
+        print("Inside Eval Candidate Gradient")
         measurement = self.pool.get_grad_meas(index)
+        print("Measurement (get_grad_meas): ", measurement)
 
         if measurement is None:
             # Gradient observable for this operator has not been created yet
@@ -1037,7 +1056,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         Returns:
           energy (float): the energy in this state.
         """
-
+        print("Evaluate Observable")
         energy = self.evaluate_observable(
             self.energy_meas, coefficients, indices, ref_state, orb_params
         )
@@ -1051,6 +1070,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         """
 
         # Initialize data structures
+        print("Run, Initialize")
         self.initialize()
 
         finished = False
@@ -1177,7 +1197,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         """
         Initialize data structures.
         """
-
+        print("Evaluate Energy")
         initial_energy = self.evaluate_energy()
         self.energy = initial_energy
 
@@ -2282,6 +2302,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             ngev (int): total number of gradient evaluations
             nit (int): total number of optimizer iterations
         """
+        print(". . . === Full Optimization === . . .")
         initial_coefficients, indices, initial_inv_hessian, g0, e0, maxiters = (
             self.prepare_opt(
                 initial_coefficients, indices, initial_inv_hessian, g0, e0, maxiters
@@ -2289,7 +2310,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         )
 
         print(
-            f"Initial energy: {self.energy}"
+            f"\nInitial energy: {self.energy}"
             f"\nOptimizing energy with indices {list(indices)}..."
             f"\nStarting point: {list(initial_coefficients)}"
         )
@@ -2374,7 +2395,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             g0 (list): initial gradient vector
             maxiters (int): maximum number of optimizer iterations. If None, self.max_opt_iters is assumed.
         """
-
+        print("---Prepare Optimization---")
         if initial_coefficients is None:
             initial_coefficients = deepcopy(self.coefficients)
         if indices is None:
@@ -2389,10 +2410,12 @@ class AdaptVQE(metaclass=abc.ABCMeta):
                 e0 = self.energy
         if maxiters is None:
             maxiters = self.max_opt_iter
-            
+        
+        print("Initial Coefficients 1", initial_coefficients)
         initial_coefficients = np.append(
             [0 for _ in range(self.orb_opt_dim)], initial_coefficients
         )
+        print("Initial Coefficients 2", initial_coefficients)
 
         return initial_coefficients, indices, initial_inv_hessian, g0, e0, maxiters
 
@@ -2630,17 +2653,21 @@ class LinAlgAdapt(AdaptVQE):
         Returns:
             exp_value (float): the exact expectation value of the observable
         """
-
+        print("Get State")
         ket = self.get_state(coefficients, indices, ref_state)
 
         if orb_params is not None:
             orb_rotation_generator = self.create_orb_rotation_generator(orb_params)
             ket = expm_multiply(orb_rotation_generator, ket)
 
-        print("======================= Quantum Measurement =======================")
+        print("======= Quantum Measurement =======")
         # Get the corresponding bra and calculate the energy: |<bra| H |ket>|
         bra = ket.transpose().conj()
         # exp_value = (bra * observable * ket)[0, 0].real # slower
+        print("Evaluate observable, ket:", ket)
+        print("Evaluate observable, bra:", bra)
+        print("Evaluate observable, observable:", observable)
+
         exp_value = (bra.dot(observable.dot(ket)))[0, 0].real
 
         return exp_value
@@ -3411,11 +3438,14 @@ class LinAlgAdapt(AdaptVQE):
         """
 
         measurement = self.pool.get_grad_meas(index)
+        print("Measurement (get_grad_meas): ", measurement)
+        
 
         if measurement is None:
             # Gradient observable for this operator has not been created yet
 
             operator = self.pool.get_imp_op(index)
+            print("operator", operator)
             observable = 2 * self.hamiltonian @ operator
 
         gradient = self.evaluate_observable(observable, coefficients, indices)
@@ -3479,7 +3509,9 @@ class SampledLinAlgAdapt(LinAlgAdapt):
             # Gradient observable for this operator has not been created yet
 
             operator = self.pool.get_q_op(op_index)
+            print("----Operator", operator)
             operator = to_qiskit_operator(operator, little_endian=False)
+            print("----Operator Converted", operator)
             observable = 2 * self.hamiltonian @ operator
             # observable = self.hamiltonian @ operator - operator @ self.hamiltonian
             self.pool.store_grad_meas(op_index, observable)

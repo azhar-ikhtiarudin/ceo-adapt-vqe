@@ -413,6 +413,8 @@ class OperatorPool(metaclass=abc.ABCMeta):
         """
 
         if self.operators[index].imp_operator is None:
+            print("self.imp_type", self.imp_type)
+            print("ImplementationType.SPARSE", ImplementationType.SPARSE)
             if self.imp_type == ImplementationType.SPARSE:
                 self.operators[index].create_sparse()
             else:
@@ -613,7 +615,7 @@ class GSD1(OperatorPool):
         """
         Create one-body GSD operators.
         """
-
+        print("Self.n_so:", self.n_so)
         for p in range(0, self.n_so):
             pa = 2 * p
             pb = 2 * p + 1

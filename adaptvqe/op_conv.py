@@ -146,6 +146,8 @@ def to_qiskit_term(of_term, n, switch_endianness):
         for _ in range(id_count):
             qiskit_op = qiskit_op ^ I
 
+    print("coefficient", coefficient)
+    print("qiskit_op", qiskit_op, "\n")
     qiskit_op = coefficient * qiskit_op
 
     return qiskit_op
@@ -167,6 +169,8 @@ def to_qiskit_operator(of_operator, n=None, little_endian=True):
     if isinstance(of_operator, InteractionOperator):
         of_operator = get_fermion_operator(of_operator)
 
+    print(n)
+    print(of_operator)
     if not n:
         n = count_qubits(of_operator)
 

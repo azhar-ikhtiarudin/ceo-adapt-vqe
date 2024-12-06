@@ -436,6 +436,7 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             print("\nNon-Zero Gradients (tolerance E-8):")
 
         for index in range(self.pool.size):
+            print("\n===================== Evaluating Gradient", index, "=====================")
             print("--Pool Size:", self.pool.size)
             gradient = self.eval_candidate_gradient(index, coefficients, indices)
             print("--Gradient:", gradient)
@@ -605,13 +606,16 @@ class AdaptVQE(metaclass=abc.ABCMeta):
         """
         print("Inside Eval Candidate Gradient")
         measurement = self.pool.get_grad_meas(index)
-        print("Measurement (get_grad_meas): ", measurement)
+        print(">> Measurement (get_grad_meas): ", measurement)
 
         if measurement is None:
             # Gradient observable for this operator has not been created yet
 
             operator = self.pool.get_imp_op(index)
             observable = self.hamiltonian @ operator - operator @ self.hamiltonian
+            print("Gradient Measurement")
+            print("Hamiltonian:", self.hamiltonian)
+            print("Operator:", operator)
 
             # Process so that it's ready to evaluate
             measurement = self.observable_to_measurement(observable)
@@ -2309,10 +2313,20 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             )
         )
 
+        print("\n## Energy Optimization Parameter")
+        print("Initial Coefficients:", initial_coefficients)
+        print("Indices:", indices)
+        print("Initial Inv Hessian:", initial_inv_hessian)
+        print("g0:", g0)
+        print("e0:", e0, "\n")
+        qc = self.pool.get_circuit(indices, initial_coefficients)
+        print("Ansatz Circuit:", qc)
+
+
         print(
             f"\nInitial energy: {self.energy}"
             f"\nOptimizing energy with indices {list(indices)}..."
-            f"\nStarting point: {list(initial_coefficients)}"
+            f"\nStarting point: {list(initial_coefficients)}\n"
         )
 
         # Define callback to collect data during optimization
@@ -2377,6 +2391,11 @@ class AdaptVQE(metaclass=abc.ABCMeta):
             gradients = evolution["gradient"][-1]
         else:
             gradients = g0
+
+        print("Evolution Results")
+        print("Parameters:", evolution['parameters'])
+        print("Energy:", evolution['energy'])
+        print("Gradient:", evolution['gradient'])
 
         return ansatz_coefficients, opt_energy, inv_hessian, gradients, nfev, ngev, nit
 
@@ -3445,7 +3464,9 @@ class LinAlgAdapt(AdaptVQE):
             # Gradient observable for this operator has not been created yet
 
             operator = self.pool.get_imp_op(index)
-            print("operator", operator)
+            print("Gradient Measurement")
+            print("Hamiltonian:", self.hamiltonian)
+            print("Operator:", operator)
             observable = 2 * self.hamiltonian @ operator
 
         gradient = self.evaluate_observable(observable, coefficients, indices)
